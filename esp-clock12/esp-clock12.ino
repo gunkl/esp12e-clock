@@ -137,7 +137,7 @@ void loop()
     //
     // displayLEDS: 0-11 position is clock position (0 is 12)
     //              0 is off, 1 is hour, 2 is minute, 3 is seconds, 4 is secondMinute
-    for (int i=0; i<11; i=i+1){
+    for (int i=0; i<12; i=i+1){
       displayLEDS[i] = 0;
     }
     displayLEDS[roughSecond] = 3; // order here is important as we overwrite the more important
@@ -146,7 +146,7 @@ void loop()
     // Serial.println(String(currentHour) + " " + String(roughMinute) + " " + String(roughSecond));
     // now handle remaining minutes (not displayed by the above - roughMinute on 12 LED clock is only 5 minute resolution
     // display purple dots representing minutes (1-4) wherever we can that doesn't overwrite another second/minute/hour indicator.
-    for (int i=0; i<11; i=i+1){
+    for (int i=0; i<12; i=i+1){
       if (displayLEDS[i] == 0 && remainMinute > 0){
         remainMinute--;
         displayLEDS[i] = 4;
@@ -158,7 +158,7 @@ void loop()
     //    
     //
     // turn all LEDs on.
-    for (int i=0; i<11; i=i+1){
+    for (int i=0; i<12; i=i+1){
       // Serial.println("i: " + String(i) + " " + String(displayCOLORS[displayLEDS[i]][0]) + " " + String(displayCOLORS[displayLEDS[i]][1]) + " " + String(displayCOLORS[displayLEDS[i]][2]));
       strip.setPixelColor(i, displayCOLORS[displayLEDS[i]][0], displayCOLORS[displayLEDS[i]][1], displayCOLORS[displayLEDS[i]][2]);
       // displayLEDS: 0-11 position is clock position (0 is 12)

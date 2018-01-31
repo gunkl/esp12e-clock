@@ -7,6 +7,5 @@ A simple 12-LED ring WS2812b with WiFi NTP Clock - Serial port programmable
  * Output from ESP to DI on LED ring via GPIO14
 
 # ToDo
- * fix "secondMinute" hand to actually work reliably
  * timezone support
 

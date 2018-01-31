@@ -14,10 +14,19 @@ long lastUpdate = millis();
 long lastSecond = millis();
 
 String hours, minutes, seconds;
-int currentSecond, currentMinute, currentHour, secondMinute;
-int thirdMinute[5];
 bool greaterthan = false;
-bool secondMinute_modifier = false;
+// displayLEDS: 0-11 position is clock position (0 is 12)
+//              0 is off, 1 is hour, 2 is minute, 3 is seconds, 4 is secondMinute
+//              note that the above positioning is critical to matching displayCOLORS array.
+int currentMinute, currentSecond, currentHour;
+int displayLEDS[12] = {0,0,0,0,0,0,0,0,0,0,0};
+int displayCOLORS[5][3] = {
+  {0,0,0},
+  {255,0,0}, // hour Color pos(1)
+  {0,255,0}, // minute Color pos(2)
+  {0,0,255}, // seconds Color pos(3)
+  {75,0,255}, // singleMinutes Color pos(4)
+  };
 
 char ssid[64];  //  your network SSID (name)
 char password[64];       // your network password
@@ -105,24 +114,10 @@ void setup()
 
 void loop()
 {
-  int testHour = 0;
   if ((millis() - lastUpdate) > 36000000) updateTime(); // 36000000 is every 10 hours
 
   if ((millis() - lastSecond) > 1000)
   {
-    // 12-led ring
-
-    for (int i=0; i<13; i=i+1){
-      strip.setPixelColor(i, 0, 0, 0);
-    }
-    
-    /* 24-led ring
-    strip.setPixelColor(currentSecond / 2.5, 0, 0, 0);
-    strip.setPixelColor(currentMinute / 2.5, 0, 0, 0);
-    strip.setPixelColor(currentHour * 2, 0, 0, 0);
-    */
-
-    strip.show();
     lastSecond = millis();
     currentSecond++;
     if (currentSecond > 59)
@@ -131,79 +126,44 @@ void loop()
       if (currentMinute > 59) {
         currentMinute = 0;
         currentHour++;
-        testHour = currentHour; // we need to know the hour below here but with 0 being 12 not 0.
-        if (currentHour > 12){
-          currentHour = 0;
-        }
       }
     }
     String currentTime = String(currentHour) + ':' + String(currentMinute) + ':' + String(currentSecond);
-    Serial.println(currentTime);
+    Serial.println("Time: " + currentTime);
 
-    strip.setPixelColor(currentSecond / 5, 0, 0, 255);
-    strip.setPixelColor(currentMinute / 5, 0, 255, 0);
+    int roughSecond = (currentSecond / 5);
     int roughMinute = (currentMinute / 5);
     int remainMinute = (currentMinute % 5);
-    if (remainMinute == 0) {
-            secondMinute_modifier = false; // stop adding to the second minute hand
-    }
-    if (roughMinute <= 6 && (roughMinute + (currentMinute % 5)) != roughMinute){
-      secondMinute = roughMinute + (currentMinute % 5);
-      greaterthan = false;
-    }
-    if (roughMinute > 6 && (roughMinute - (currentMinute % 5)) != roughMinute){
-      secondMinute = roughMinute - (currentMinute % 5);
-      greaterthan = true;
-    }
-    if (secondMinute == currentHour) {
-      secondMinute_modifier = true; // add to the second minute hand because the hour hand is in the way
-    }
-    if (secondMinute_modifier) {
-      if (!greaterthan){
-        secondMinute++;
-      }
-      else {
-        secondMinute--;
-      }
-    }
-    strip.setPixelColor(secondMinute, 50, 0, 200);
-    // Handle scenarios where there are x6,x7,x8,x9 minutes (since clock has 12 LEDs, how do we display
-    // finer than 5 minutes? we create purple dots.
-    // do something different with the leds between the minute marker and the second minute marker.
-    // second minute marker is the indicator by distance, ie if its minute 7, you'll get the 5 pixel lit
-    // plus a dim one close, and a bright one on the second (remainder) led away
-    int hour_intercept = 0; // if the minute modifier hits the hour led, then add another
     //
-    // if <= 34 minutes, then put the purple dots to the left of the 6 hand
-    if (!greaterthan && remainMinute != 0){ 
-      for ( int i=(roughMinute + 1); i < (roughMinute + remainMinute); i = i + 1){
-        if (i == testHour){
-          hour_intercept++;
+    // displayLEDS: 0-11 position is clock position (0 is 12)
+    //              0 is off, 1 is hour, 2 is minute, 3 is seconds, 4 is secondMinute
+    for (int i=0; i<11; i=i+1){
+      displayLEDS[i] = 0;
+    }
+    displayLEDS[roughSecond] = 3; // order here is important as we overwrite the more important
+    displayLEDS[roughMinute] = 2; // time frame with the less important
+    displayLEDS[currentHour] = 1;
+    // Serial.println(String(currentHour) + " " + String(roughMinute) + " " + String(roughSecond));
+    // now handle remaining minutes (not displayed by the above - roughMinute on 12 LED clock is only 5 minute resolution
+    // display purple dots representing minutes (1-4) wherever we can that doesn't overwrite another second/minute/hour indicator.
+    for (int i=0; i<11; i=i+1){
+      if (displayLEDS[i] == 0 && remainMinute > 0){
+        remainMinute--;
+        displayLEDS[i] = 4;
+        if (remainMinute == 0){
+          break;
         }
-        strip.setPixelColor((i + hour_intercept), 10, 0, 35);
-        // Serial.println("LT: " + String(i) + " - HRI: " + String(hour_intercept));
       }
     }
-    // if > 34 minutes, then put the purple dots to the right of the 6 hand
-    else if (remainMinute != 0) {
-      for ( int i=(roughMinute - remainMinute + 1); i < (roughMinute); i = i + 1){
-        if (i <= testHour){
-          hour_intercept++;
-        }
-        else {
-          hour_intercept = 0;
-        }
-        strip.setPixelColor((i - hour_intercept), 10, 0, 35);
-        // Serial.println("GT: " + String(i) + " - HRI: " + String(hour_intercept));
-
-      }
+    //    
+    //
+    // turn all LEDs on.
+    for (int i=0; i<11; i=i+1){
+      // Serial.println("i: " + String(i) + " " + String(displayCOLORS[displayLEDS[i]][0]) + " " + String(displayCOLORS[displayLEDS[i]][1]) + " " + String(displayCOLORS[displayLEDS[i]][2]));
+      strip.setPixelColor(i, displayCOLORS[displayLEDS[i]][0], displayCOLORS[displayLEDS[i]][1], displayCOLORS[displayLEDS[i]][2]);
+      // displayLEDS: 0-11 position is clock position (0 is 12)
+      //              0 is off, 1 is hour, 2 is minute, 3 is seconds, 4 is secondMinute
     }
-    strip.setPixelColor(currentHour, 255, 0, 0);
-    /* 24-led ring
-   strip.setPixelColor(currentSecond / 2.5, 0, 0, 255);
-    strip.setPixelColor(currentMinute / 2.5, 0, 255, 0);
-    strip.setPixelColor(currentHour * 2, 255, 0, 0);
-    */
     strip.show();
   }
 }
@@ -219,7 +179,7 @@ void updateTime()
   minutes = timeClient.getMinutes();
   seconds = timeClient.getSeconds();
   currentHour = hours.toInt();
-  if (currentHour > 12) currentHour = currentHour - 12;
+  if (currentHour >= 12) currentHour = currentHour - 12;
   currentMinute = minutes.toInt();
   currentSecond = seconds.toInt();
   lastUpdate = millis();
@@ -233,7 +193,8 @@ void updateTime()
   // currentMinute = 32;
   // currentHour = 5;
   // currentMinute = 37;
-  
+  // currentHour = 8;
+  // currentMinute = 39;  
 }
 
 boolean fileWrite(String name, String filemode, String content) {
@@ -510,7 +471,7 @@ void on_component_selected(MenuComponent* p_menu_component) {
 void display_help() {
   Serial.println("");
   Serial.println("***************");
-  Serial.println("w: go to previus item (up)");
+  Serial.println("w: go to previous item (up)");
   Serial.println("s: go to next item (down)");
   Serial.println("a: go back (right)");
   Serial.println("d: select \"selected\" item");

@@ -126,6 +126,7 @@ void loop()
       if (currentMinute > 59) {
         currentMinute = 0;
         currentHour++;
+        if (currentHour == 12) currentHour = 0;
       }
     }
     String currentTime = String(currentHour) + ':' + String(currentMinute) + ':' + String(currentSecond);
